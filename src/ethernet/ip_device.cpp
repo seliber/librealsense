@@ -196,7 +196,7 @@ bool ip_device::init_device_data(rs2::software_device sw_device)
         for(auto stream_profile_to : device_streams)
         {
             int from_key = RsRTSPClient::getPhysicalSensorUniqueKey(stream_profile_from.stream_type(), stream_profile_from.stream_index());
-            int to_key = RsRTSPClient::getPhysicalSensorUniqueKey(stream_profile_from.stream_type(), stream_profile_from.stream_index());
+            int to_key = RsRTSPClient::getPhysicalSensorUniqueKey(stream_profile_to.stream_type(), stream_profile_to.stream_index());
 
             if(minimal_extrinsics_map.find(std::make_pair(from_key, to_key)) == minimal_extrinsics_map.end())
             {
@@ -358,41 +358,42 @@ void ip_device::inject_frames_loop(std::shared_ptr<rs_rtp_stream> rtp_stream)
 {
     try
     {
-        rtp_stream.get()->is_enabled = true;
+        rtp_stream->is_enabled = true;
 
-        rtp_stream.get()->frame_data_buff.frame_number = 0;
+        rtp_stream->frame_data_buff.frame_number = 0;
 
-        rtp_stream->frame_data_buff.bpp = getStreamProfileBpp(rtp_stream.get()->get_stream_profile().format());
+        rtp_stream->frame_data_buff.bpp = getStreamProfileBpp(rtp_stream->get_stream_profile().format());
         rtp_stream->frame_data_buff.stride = rtp_stream->frame_data_buff.bpp * rtp_stream->m_rs_stream.width;        
         
-        int uid = rtp_stream.get()->m_rs_stream.uid;
-        rs2_stream type = rtp_stream.get()->m_rs_stream.type;
+        int uid = rtp_stream->m_rs_stream.uid;
+        rs2_stream type = rtp_stream->m_rs_stream.type;
         int sensor_id = stream_type_to_sensor_id(type);
 
-        while(rtp_stream.get()->is_enabled == true)
+        while(rtp_stream->is_enabled)
         {
-            if(rtp_stream.get()->queue_size() != 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if(rtp_stream->queue_size() != 0)
             {
-                Raw_Frame* frame = rtp_stream.get()->extract_frame();
-                rtp_stream.get()->frame_data_buff.pixels = frame->m_buffer;
+                Raw_Frame* frame = rtp_stream->extract_frame();
+                rtp_stream->frame_data_buff.pixels = frame->m_buffer;
 
-                rtp_stream.get()->frame_data_buff.timestamp = frame->m_metadata->data.timestamp;
+                rtp_stream->frame_data_buff.timestamp = frame->m_metadata->data.timestamp;
 
-                rtp_stream.get()->frame_data_buff.frame_number++;
-                rtp_stream.get()->frame_data_buff.domain = frame->m_metadata->data.timestampDomain;
+                rtp_stream->frame_data_buff.frame_number++;
+                rtp_stream->frame_data_buff.domain = frame->m_metadata->data.timestampDomain;
 
-                remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_FRAME_TIMESTAMP, rtp_stream.get()->frame_data_buff.timestamp);
+                remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_FRAME_TIMESTAMP, rtp_stream->frame_data_buff.timestamp);
                 remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_ACTUAL_FPS, frame->m_metadata->data.actualFps);
-                remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_FRAME_COUNTER, rtp_stream.get()->frame_data_buff.frame_number);
+                remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_FRAME_COUNTER, rtp_stream->frame_data_buff.frame_number);
                 remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_FRAME_EMITTER_MODE, 1);
 
                 remote_sensors[sensor_id]->sw_sensor->set_metadata(RS2_FRAME_METADATA_TIME_OF_ARRIVAL, std::chrono::duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count());
-                remote_sensors[sensor_id]->sw_sensor->on_video_frame(rtp_stream.get()->frame_data_buff);
+                remote_sensors[sensor_id]->sw_sensor->on_video_frame(rtp_stream->frame_data_buff);
             }
         }
 
-        rtp_stream.get()->reset_queue();
-        DBG << "Polling data at stream " << rtp_stream.get()->m_rs_stream.uid << " completed";
+        rtp_stream->reset_queue();
+        DBG << "Polling data at stream " << rtp_stream->m_rs_stream.uid << " completed";
     }
     catch(const std::exception& ex)
     {

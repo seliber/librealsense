@@ -904,6 +904,10 @@ namespace Intel.RealSense
         [DllImport(dllName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern int rs2_config_can_resolve(IntPtr config, IntPtr pipe, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ErrorMarshaler))] out object error);
         #endregion
+        #region rs_net
+        [DllImport("realsense2-net", CallingConvention = CallingConvention.Cdecl)]
+        internal static extern IntPtr rs2_create_net_device(int api_version, string address, [MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ErrorMarshaler))] out object error);
+        #endregion
 
         #region Error Handling
         [DllImport(dllName, CallingConvention = CallingConvention.Cdecl)]
